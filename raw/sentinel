@@ -18,9 +18,9 @@ _vault_ident="$(media_identity "$_target_vault")"
 test -z "$_vault_ident" && exit 2
 ! media_vault_initialize "$_vault_ident" "$_target_vault" && exit 3
 
-_vault_alias="$(media_metadata_get "$_vault_ident" alias)"
 _vault_ident_path="$(media_identity_path "$_vault_ident")"
-_vault_catacomb_path="$(media_catacomb)/$_vault_ident_path"
+_vault_catacomb_path="$(media_catacomb)/raw/$_vault_ident_path"
+_vault_alias="$(media_metadata_get "$_vault_ident" alias)"
 ! mkdir -p "$_vault_catacomb_path" && exit 4
 ! media_vault_export "$_vault_ident" "$_vault_catacomb_path" 1 && exit 5
 
