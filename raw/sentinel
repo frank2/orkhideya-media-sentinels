@@ -1,0 +1,32 @@
+#!/bin/bash
+
+source orkhideya
+ork_include media
+
+# the raw sentinel consumes a vault and exports a soft-linked alias.
+# the raw export hierarchy is as follows:
+#
+#     catacombs/raw/i/de/identity/alias
+#
+
+_target_vault="$(realpath "$1")"
+! test -d "$_target_vault" && exit 1
+
+_rm_on_success="$2"
+
+_vault_ident="$(media_identity "$_target_vault")"
+test -z "$_vault_ident" && exit 2
+! media_vault_initialize "$_vault_ident" "$_target_vault" && exit 3
+
+_vault_alias="$(media_metadata_get "$_vault_ident" alias)"
+_vault_ident_path="$(media_identity_path "$_vault_ident")"
+_vault_catacomb_path="$(media_catacomb)/$_vault_ident_path"
+! mkdir -p "$_vault_catacomb_path" && exit 4
+! media_vault_export "$_vault_ident" "$_vault_catacomb_path" 1 && exit 5
+
+if [ -n "$_rm_on_success" ]; then
+    rm -rf "$_target_vault"
+fi
+
+echo "$_vault_catacomb_path/$_vault_alias"
+exit 0
