@@ -1,0 +1,132 @@
+#!/bin/bash
+
+source orkhideya
+ork_include media
+ork_include stdlib
+ork_include stdout
+
+# helper functions to assist either this script or others
+source "$(media_sentinels)/$(stdlib_pathify raw.consume.audio)/barracks"
+
+# audio:
+#   music: 
+#     vaults:  [Artist-Album-AlbumType-ReleaseYear-ReleaseGroup]
+#     content: 
+#       longform:  [DiscNumber-Album-TrackNumber-Artist-TrackTitle-ReleaseGroup]
+#       shortform: [DiscNumber-Tracknumber-Artist-TrackTitle-ReleaseGroup]
+#
+#     by-album/[0-9A-Z]/album titles/labelled vaults/shortform content 
+#     by-artist/[0-9A-Z]/artist names/labelled vaults/shortform content 
+#     by-country/[A-Z]/country name/longform content
+#     by-genre/[A-Z]/genre names/longform content
+#     by-language/[A-Z]/language name/longform content
+#     by-single/[0-9A-Z]/track title/longform content
+#     by-tag/[A-Z]/tags with pathified fanout/longform content
+#     by-year/year/labelled vaults/shortform content
+#
+#   vault tags:
+#     music.album.artist
+#     music.album.discs
+#     music.album.releasegroup
+#     music.album.title
+#     music.album.year
+#     music.album.type [album/ep/lp/mix/comp/single]
+#
+#   content tags:
+#     music.track.album
+#     music.track.artist
+#     music.track.country
+#     music.track.comment
+#     music.track.genre
+#     music.track.language
+#     music.track.tags
+#     music.track.title
+#     music.track.number
+#     music.track.year
+ 
+_target_vault="$(realpath "$1")"
+! test -d "$_target_vault" && exit 1
+
+_input_tags="$2"
+_rm_on_success="$3"
+
+_vault_ident="$(media_identity "$_target_vault")"
+test -z "$_vault_ident" && exit 2
+
+stdout_warning "Consuming $(stdout_color_wrap main-focused "$_target_vault")..."
+_vault_raw_path="$(media_sentinel_order raw.consume "$_target_vault" "$_rm_on_success" 2>/dev/null)"
+test -z "$_vault_raw_path" && exit 3
+
+_mimes_file="$(stdlib_tmpfile)"
+_artists_file="$(stdlib_tmpfile)"
+_albums_file="$(stdlib_tmpfile)"
+_audio_path="$(media_sentinels)/$(stdlib_pathify raw.classify.audio)"
+
+_audio_mimes="$_audio_path/mime-types"
+_all_audio_mimes="$(find "$_audio_path" -name mime-types -exec cat "{}" \; > "$_mimes_file")"
+
+# enumerate all audio files in the vault
+media_metadata_get "$_vault_ident" vault.contents | media_metadata_dataset_expand | while read _vault_file_ident; do
+    _vault_filename="$(media_archive)/$(media_identity_path "$_vault_file_ident")/file"
+    _vault_file_mime="$(media_metadata_get "$_vault_file_ident" mime)"
+    _vault_file_extension="$(media_metadata_get "$_vault_file_ident" extension)"
+    test -z "$_vault_file_mime" -a -z "$_vault_file_extension" && continue
+    test "$_vault_file_mime" != "audio/mpeg" -a "$_vault_file_extension" != "mp3" -a "$_vault_file_mime" != "audio/x-flac" -a "$_vault_file_extension" != "flac" && continue
+
+    stdout_warning "Cataloging $(stdout_color_wrap main-focused "$_vault_file_ident")..."
+
+    _track_album="$(music_metadata_get "$_vault_file_ident" track.album)"
+    _track_artist="$(music_metadata_get "$_vault_file_ident" track.artist)"
+
+    if [ -z "$_track_artist" ]; then
+        _track_artist="$(music_metadata_get "$_vault_file_ident" album.artist)"
+    fi
+
+    _track_country="$(music_metadata_get "$_vault_file_ident" track.country)"
+    _track_genre="$(music_metadata_get "$_vault_file_ident" track.genre)"
+    _track_language="$(music_metadata_get "$_vault_file_ident" track.language)"
+    _track_title="$(music_metadata_get "$_vault_file_ident" track.title)"
+    _track_number="$(music_metadata_get "$_vault_file_ident" track.number)"
+    _track_year="$(music_metadata_get "$_vault_file_ident" track.year)"
+    _track_tags="$_input_tags"
+
+    media_metadata_set "$_vault_file_ident" music.track.album "$_track_album"
+    media_metadata_set "$_vault_file_ident" music.track.artist "$_track_artist"
+    media_metadata_set "$_vault_file_ident" music.track.country "$_track_country"
+    media_metadata_set "$_vault_file_ident" music.track.genre "$_track_genre"
+    media_metadata_set "$_vault_file_ident" music.track.language "$_track_language"
+    media_metadata_set "$_vault_file_ident" music.track.title "$_track_title"
+    media_metadata_set "$_vault_file_ident" music.track.number "$_track_number"
+    media_metadata_set "$_vault_file_ident" music.track.year "$_track_year"
+    media_metadata_set "$_vault_file_ident" music.track.tags "$_track_tags"
+
+    echo "$_track_artist" >> "$_artists_file"
+    echo "$_track_album" >> "$_albums_file"
+done
+
+sort -u "$_artists_file" -o "$_artists_file"
+sort -u "$_albums_file" -o "$_albums_file"
+
+if [ "$(cat "$_artists_file" | wc -l)" -gt "1" ]; then
+    _album_artist="Various Artists"
+else
+    _album_artist="$(head -n1 "$_artists_file")"
+fi
+
+if [ "$(cat "$_albums_file" | wc -l)" -gt "1" ]; then
+    _album_title="Various Albums"
+    _album_type="comp"
+else
+    _album_title="$(head -n1 "$_albums_file")"
+    _album_type="album"
+fi
+
+media_metadata_set "$_vault_ident" music.album.artist "$_album_artist"
+media_metadata_set "$_vault_ident" music.album.title "$_album_title"
+media_metadata_set "$_vault_ident" music.album.year "$_track_year"
+media_metadata_set "$_vault_ident" music.album.type "$_album_type"
+
+rm "$_mimes_file" &>/dev/null
+rm "$_artists_file" &>/dev/null
+
+exit 0

@@ -1,0 +1,170 @@
+#!/bin/bash
+
+source orkhideya
+ork_include media
+ork_include stdout
+
+! ork_path_check metaflac id3ed mid3v2 && stdout_error "Audio metadata dependencies not met." exit 1
+
+function music_metadata_get
+{
+    local _file_identity="$1"
+    test -z "$_file_identity" && return 1
+
+    local _tag="$2"
+    test -z "$_tag" && return 2
+
+    local _vault_filename="$(media_archive)/$(media_identity_path "$_vault_file_ident")/file"
+    ! test -r "$_vault_filename" && return 3
+
+    local _vault_file_mime="$(media_metadata_get "$_file_identity" mime)"
+    local _vault_file_extension="$(media_metadata_get "$_file_identity" extension)"
+    test -z "$_vault_file_mime" -a -z "$_vault_file_extension" && return 4
+
+    local _metadata_value=""
+    local _metadata_status="0"
+
+    if [ "$_vault_file_mime" == "audio/mpeg" -o "$_vault_file_extension" == "mp3" ]; then
+        _metadata_value="$(music_mp3_metadata_get "$_vault_filename" "$_tag"; _metadata_status="$?")"
+        test "$_metadata_status" != "0" && return 5
+    elif [ "$_vault_file_mime" == "audio/x-flac" -o "$_vault_file_extension" == "flac" ]; then
+        _metadata_value="$(music_flac_metadata_get "$_vault_filename" "$_tag"; _metadata_status="$?")"
+        test "$_metadata_status" != "0" && return 6
+    fi
+
+    echo "$_metadata_value"
+    return 0
+}
+
+function music_flac_metadata_get
+{
+    local _flac_file="$1"
+    ! test -r "$_flac_file" && return 1
+
+    local _flac_tag="$2"
+    local _translated_flac_tag="$(music_metadata_translate_flac "$_flac_tag")"
+    test -z "$_translated_flac_tag" && return 2
+
+    local _flac_line="$(metaflac --export-tags-to=- "$_flac_file" | grep -i "^${_flac_tag}=")"
+    test -z "$_flac_line" && return 3
+
+    local _flac_file_tag="$(echo "$_flac_line" | awk -F '=' '{ print $1 }')"
+    local _flac_content="$(echo "$_flac_line" | sed -e "s,^${_flac_file_tag}=,,")"
+
+    echo "$_flac_content"
+    return 0
+}
+
+function music_mp3_metadata_get
+{
+    local _mp3_file="$1"
+    ! test -r "$_mp3_file" && return 1
+    
+    local _mp3_tag="$2"
+    local _translated_id3v1_tag="$(music_metadata_translate_mp3_id3v1 "$_mp3_tag")"
+    local _translated_id3v2_tag="$(music_metadata_translate_mp3_id3v2 "$_mp3_tag")"
+    test -z "$_translated_id3v1_tag" -a -z "$_translated_id3v2_tag" && return 2
+
+    if [ -n "$_translated_id3v2_tag" ]; then
+        local _tag_data="$(mid3v2 -l "$_mp3_file" | egrep -a -o "^${_translated_id3v2_tag}=.*$" | sed -r -e "s,^${_translated_id3v2_tag}=,,")"
+
+        if [ -n "$_tag_data" ]; then
+            echo "$_tag_data"
+            return 0
+        fi
+    fi
+
+    if [ -n "$_translated_id3v1_tag" ]; then
+        local _tag_data="$(id3ed -i "$_mp3_file" | egrep -a -o "^${_translated_id3v1_tag}:.*$" | sed -e "s,^${_translated_id3v1_tag}: ,,")"
+
+        if [ -n "$_tag_data" ]; then
+            echo "$_tag_data"
+            return 0
+        fi
+    fi
+
+    return 3
+}
+
+function music_metadata_translate_flac
+{
+    local _tag="$1"
+
+    case "$_tag" in
+        "ALBUM") echo "track.album";;
+        "ARTIST") echo "track.artist";;
+        "ALBUMARTIST") echo "album.artist";;
+        "COMMENT") echo "track.comment";;
+        "GENRE") echo "track.genre";;
+        "LANGUAGE") echo "track.language";;
+        "TITLE") echo "track.title";;
+        "TRACKNUMBER") echo "track.number";;
+        "DATE") echo "track.year";;
+        "track.album") echo "ALBUM";;
+        "track.artist") echo "ARTIST";;
+        "album.artist") echo "ALBUMARTIST";;
+        "track.comment") echo "COMMENT";;
+        "track.genre") echo "GENRE";;
+        "track.language") echo "LANGUAGE";;
+        "track.title") echo "TITLE";;
+        "track.number") echo "TRACKNUMBER";;
+        "track.year") echo "DATE";;
+        *) return 1;;
+    esac
+
+    return 0
+}
+
+function music_metadata_translate_mp3_id3v1
+{
+    local _tag="$1"
+
+    case "$_tag" in
+        "album") echo "track.album";;
+        "artist") echo "track.artist";;
+        "comment") echo "track.comment";;
+        "genre") echo "track.genre";;
+        "songname") echo "track.title";;
+        "tracknum") echo "track.number";;
+        "year") echo "track.year";;
+        "track.album") echo "album";;
+        "track.artist") echo "artist";;
+        "track.comment") echo "comment";;
+        "track.genre") echo "genre";;
+        "track.title") echo "songname";;
+        "track.number") echo "tracknum";;
+        "track.year") echo "year";;
+        *) return 1;;
+    esac
+
+    return 0
+}
+
+function music_metadata_translate_mp3_id3v2
+{
+    local _tag="$1"
+
+    case "$_tag" in
+        "TALB") echo "track.album";;
+        "TPE1") echo "track.artist";;
+        "TPE2") echo "album.artist";;
+        "COMM") echo "track.comment";;
+        "TCON") echo "track.genre";;
+        "TLAN") echo "track.language";;
+        "TIT2") echo "track.title";;
+        "TRCK") echo "track.number";;
+        "TYER") echo "track.year";;
+        "track.album") echo "TALB";;
+        "track.artist") echo "TPE1";;
+        "album.artist") echo "TPE2";;
+        "track.comment") echo "COMM";;
+        "track.genre") echo "TCON";;
+        "track.language") echo "TLAN";;
+        "track.title") echo "TIT2";;
+        "track.number") echo "TRCK";;
+        "track.year") echo "TYER";;
+        *) return 1;;
+    esac
+
+    return 0
+}

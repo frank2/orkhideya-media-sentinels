@@ -1,0 +1,104 @@
+#!/bin/bash
+
+source orkhideya
+ork_include media
+ork_include stdlib
+ork_include stdout
+
+_target_vault="$(realpath "$1")"
+! test -d "$_target_vault" && exit 1
+
+_population_file="$(stdlib_tmpfile)"
+_weight_file="$(stdlib_tmpfile)"
+
+find -L "$_target_vault" -type f | while read _filename; do
+    _mimetype="$(file --mime-type "$_filename" | awk -F ':' '{ print $NF }' | cut -b 2- | tr '[:upper:]' '[:lower:]')"
+    _filesize="$(stat -c %s "$_filename")"
+    echo "${_mimetype}:${_filesize}" >> "$_weight_file"
+    echo "$_mimetype" >> "$_population_file"
+done
+
+_census_file="$(stdlib_tmpfile)"
+_gravity_file="$(stdlib_tmpfile)"
+
+cat "$_population_file" | sort -u | while read _mimetype; do
+    _population="$(cat "$_population_file" | grep -o "^${_mimetype}\$" | wc -l)"
+    _gravity_calc="$(stdlib_tmpfile)"
+
+    # something about this pipeline causes the sum variable to get reset... not sure why.
+    cat "$_weight_file" | grep "^${_mimetype}:" | awk -F ':' '{ print $2 }' | while read _weight; do
+        _gravity_sum="$(($_gravity_sum+$_weight))"
+        echo "$_gravity_sum" > "$_gravity_calc"
+    done
+
+    _gravity_sum="$(cat "$_gravity_calc")"
+    rm "$_gravity_calc" &>/dev/null
+    
+    echo "${_population}:${_mimetype}" >> "$_census_file"
+    echo "${_gravity_sum}:${_mimetype}" >> "$_gravity_file"
+done
+
+_classify_sentinels="$(media_sentinels)/$(stdlib_pathify raw.classify)"
+_mimes_file="$(stdlib_tmpfile)"
+_classifier_file="$(stdlib_tmpfile)"
+
+find -L "$(media_sentinels)/$(stdlib_pathify raw.classify)" -name 'mime-types' | sort -u > "$_classifier_file"
+
+cat "$_classifier_file" | sort -u | while read _mime_types; do
+    _classifier_tree="$(echo "$_mime_types" | sed -r -e "s,^${_classify_sentinels}/,," -e 's,/mime-types$,,')"
+    _classifier_tree="$(stdlib_configify "$_classifier_tree")"
+
+    cat "$_mime_types" | while read _mime_pairing; do
+        _mime_type="$(echo "$_mime_pairing" | awk -F ':' '{ print $1 }')"
+        echo "${_mime_type}:${_classifier_tree}" >> "$_mimes_file"
+    done
+done
+
+sort -gr "$_census_file" -o "$_census_file"
+sort -gr "$_gravity_file" -o "$_gravity_file"
+
+_gravity_selection="$(stdlib_tmpfile)"
+_populous_selection="$(stdlib_tmpfile)"
+
+# check gravity-affected mimes first
+cat "$_gravity_file" | awk -F ':' '{ print $2 }' | while read _gravity_mime; do
+    _known_mime="$(cat "$_classifier_file" | xargs egrep -l "^${_gravity_mime}:[a-z0-9]+:weight")"
+
+    if [ -n "$_known_mime" ]; then
+        echo "$_gravity_mime" > "$_gravity_selection"
+        break
+    fi
+done
+
+# then populous
+cat "$_census_file" | awk -F ':' '{ print $2 }' | while read _census_mime; do
+    _known_mime="$(cat "$_classifier_file" | xargs egrep -l "^${_census_mime}:[a-z0-9]+:populous")"
+
+    if [ -n "$_known_mime" ]; then
+        echo "$_populous_mime" > "$_populous_selection"
+        break
+    fi
+done
+
+if [ -r "$_gravity_selection" ]; then
+    _gravity_determined="$(cat "$_gravity_selection")"
+    _gravity_determined="$(cat "$_mimes_file" | grep "^$_gravity_determined" | awk -F ':' '{ print $2 }')"
+fi
+
+if [ -r "$_populous_selection" ]; then
+    _populous_determined="$(cat "$_populous_selection")"
+    _populous_determined="$(cat "$_mimes_file" | grep "^$_populous_determined" | awk -F ':' '{ print $2 }')"
+fi
+
+echo "$_gravity_determined|$_populous_determined"
+
+rm "$_gravity_file" &>/dev/null
+rm "$_census_file" &>/dev/null
+rm "$_population_file" &>/dev/null
+rm "$_weight_file" &>/dev/null
+rm "$_mimes_file" &>/dev/null
+rm "$_classifier_file" &>/dev/null
+rm "$_gravity_selection" &>/dev/null
+rm "$_populous_selection" &>/dev/null
+
+exit 0

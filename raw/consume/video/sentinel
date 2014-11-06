@@ -1,0 +1,95 @@
+#!/bin/bash
+
+source orkhideya
+ork_include media
+ork_include stdlib
+ork_include stdout
+
+# video:
+#   vaults:  [Studio.Title.Season.Year.ReleaseGroup]
+#   content: 
+#     longform:  [Studio.Title.Season.Year.ReleaseGroup]
+#     shortform: [Title.Year.ReleaseGroup]
+#
+#   by-studio/[0-9A-Z]/stduio names/vaults
+#   by-title/[0-9A-Z]/titles/shortform content
+#   by-country/[A-Z]/country name/vaults
+#   by-genre/[A-Z]/genre names/longform content
+#   by-language/[A-Z]/language name/longform content
+#   by-format/{episodic, film, clip}/vaults
+#   by-tag/[A-Z]/tags with pathified fanout/longform content
+#   by-year/years/title fanout
+#
+# vault tags:
+#   video.box.format [episodic/film/clip]
+#   video.box.season
+#   video.box.studio
+#   video.box.title
+#   video.box.year
+#
+# content tags:
+#   video.tape.title
+#   video.tape.season
+#   video.tape.episode
+#   video.tape.language
+#   video.tape.country
+#   video.tape.genre
+#   video.tape.year
+#   video.tape.tags
+ 
+_target_vault="$(realpath "$1")"
+! test -d "$_target_vault" && exit 1
+
+_input_tags="$2"
+_rm_on_success="$3"
+
+_vault_ident="$(media_identity "$_target_vault")"
+test -z "$_vault_ident" && exit 2
+
+stdout_warning "Consuming $(stdout_color_wrap main-focused "$_target_vault")..."
+_vault_raw_path="$(media_sentinel_order raw.consume "$_target_vault" "$_rm_on_success" 2>/dev/null)"
+test -z "$_vault_raw_path" && exit 3
+
+_mimes_file="$(stdlib_tmpfile)"
+_count_file="$(stdlib_tmpfile)"
+_video_path="$(media_sentinels)/$(stdlib_pathify raw.classify.video)"
+_video_mimes="$_video_path/mime-types"
+_all_video_mimes="$(find "$_audio_path" -name mime-types -exec cat "{}" \; > "$_mimes_file")"
+
+# enumerate all audio files in the vault
+media_metadata_get "$_vault_ident" vault.contents | media_metadata_dataset_expand | while read _vault_file_ident; do
+    _vault_filename="$(media_archive)/$(media_identity_path "$_vault_file_ident")/file"
+    _vault_file_mime="$(media_metadata_get "$_vault_file_ident" mime)"
+    _vault_file_extension="$(media_metadata_get "$_vault_file_ident" extension)"
+    test -z "$_vault_file_mime" "$_vault_file_extension" && continue
+    test -z "$(grep -o "^${_vault_file_mime}" "$_all_video_mimes")" && continue
+
+    stdout_warning "Cataloging $(stdout_color_wrap main-focused "$_vault_file_ident")..."
+
+    _vault_count="$(cat "$_count_file")"
+
+    if [ -z "$_vault_count" ]; then _vault_count="0"; fi
+
+    _vault_count="$((${_vault_count}+1))"
+    echo "$_vault_count" > "$_count_file"
+
+    media_metadata_set "$_vault_file_ident" video.tape.tags "$_track_tags"
+
+    echo "$_track_artist" >> "$_artists_file"
+    echo "$_track_album" >> "$_albums_file"
+done
+
+_vault_count="$(cat "$_count_file")"
+
+if [ "$_vault_count" -gt "1" ]; then
+    _format="episodic"
+else
+    _format="film"
+fi
+
+media_metadata_set "$_vault_ident" video.box.format "$_format"
+
+rm "$_mimes_file" &>/dev/null
+rm "$_count_file" &>/dev/null
+
+exit 0

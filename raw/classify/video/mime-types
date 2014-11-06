@@ -1,0 +1,7 @@
+video/mp4:mp4:weight
+video/mpeg:mpeg:weight
+video/quicktime:mov:weight
+video/x-flv:flv:weight
+video/x-matroska:mkv:weight
+video/x-ms-asf:asf:weight
+video/x-msvideo:wmv:weight

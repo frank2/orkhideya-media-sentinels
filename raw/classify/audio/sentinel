@@ -1,0 +1,42 @@
+#!/bin/bash
+
+source orkhideya
+ork_include media
+ork_include stdout
+ork_include stdlib
+
+# audio:
+#   music: 
+#     vaults:  [Artist-Album-AlbumType-ReleaseYear-ReleaseGroup]
+#     content: 
+#       longform:  [DiscNumber-Album-TrackNumber-Artist-TrackTitle-ReleaseGroup]
+#       shortform: [DiscNumber-Tracknumber-Artist-TrackTitle-ReleaseGroup]
+#
+#     by-album/[0-9A-Z]/album titles/labelled vaults/shortform content 
+#     by-artist/[0-9A-Z]/artist names/labelled vaults/shortform content 
+#     by-country/[A-Z]/country name/longform content
+#     by-genre/[A-Z]/genre names/longform content
+#     by-language/[A-Z]/language name/longform content
+#     by-single/[0-9A-Z]/track title/longform content
+#     by-tag/[A-Z]/tags with pathified fanout/longform content
+#     by-year/year/labelled vaults/shortform content
+#
+#   vault tags:
+#     music.album.artist
+#     music.album.discs
+#     music.album.releasegroup
+#     music.album.title
+#     music.album.year
+#     music.album.type [album/ep/lp/digipak/single]
+#
+#   content tags:
+#     music.track.album
+#     music.track.artist
+#     music.track.country
+#     music.track.encoding [flac/mp3/aac]
+#     music.track.genre
+#     music.track.language
+#     music.track.tags
+#     music.track.title
+#     music.track.number
+#     music.track.year

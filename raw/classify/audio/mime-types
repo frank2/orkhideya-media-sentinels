@@ -1,0 +1,3 @@
+audio/x-flac:flac:weight
+audio/mpeg:mp3:weight
+audio/mp4:mp4:weight
