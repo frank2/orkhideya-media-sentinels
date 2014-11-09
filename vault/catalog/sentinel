@@ -1,0 +1,14 @@
+#!/bin/bash
+
+source orkhideya
+ork_include media
+
+_vault_ident="$1"
+test -z "$_vault_ident" && exit 1
+! media_shelved "$_vault_ident" && exit 2
+
+_vault_class="$(media_metadata_get "$_vault_ident" class)"
+test -z "$_vault_class" && exit 3
+! media_sentinel_order "vault.catalog.${_vault_class}" "$_vault_ident" && exit 4
+
+exit 0

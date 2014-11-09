@@ -20,9 +20,10 @@ source "$(media_sentinels)/$(stdlib_pathify raw.consume.audio)/barracks"
 #     by-country/[A-Z]/country name/longform content
 #     by-genre/[A-Z]/genre names/longform content
 #     by-language/[A-Z]/language name/longform content
+#     by-releasegroup/[A-Z]/releasegroup/labelled vaults
 #     by-single/[0-9A-Z]/track title/longform content
 #     by-tag/[A-Z]/tags with pathified fanout/longform content
-#     by-year/year/labelled vaults/shortform content
+#     by-year/year/labelled vaults
 #
 #   vault tags:
 #     music.album.artist
@@ -30,7 +31,7 @@ source "$(media_sentinels)/$(stdlib_pathify raw.consume.audio)/barracks"
 #     music.album.releasegroup
 #     music.album.title
 #     music.album.year
-#     music.album.type [album/ep/lp/mix/comp/single]
+#     music.album.type [album/ep/lp/mix/comp/cds]
 #
 #   content tags:
 #     music.track.album
@@ -42,6 +43,7 @@ source "$(media_sentinels)/$(stdlib_pathify raw.consume.audio)/barracks"
 #     music.track.tags
 #     music.track.title
 #     music.track.number
+#     music.track.discnumber
 #     music.track.year
  
 _target_vault="$(realpath "$1")"
@@ -87,6 +89,7 @@ media_metadata_get "$_vault_ident" vault.contents | media_metadata_dataset_expan
     _track_language="$(music_metadata_get "$_vault_file_ident" track.language)"
     _track_title="$(music_metadata_get "$_vault_file_ident" track.title)"
     _track_number="$(music_metadata_get "$_vault_file_ident" track.number)"
+    _track_discnumber="$(music_metadata_get "$_vault_file_ident" track.number)"
     _track_year="$(music_metadata_get "$_vault_file_ident" track.year)"
     _track_tags="$_input_tags"
 
@@ -121,6 +124,7 @@ else
     _album_type="album"
 fi
 
+media_metadata_set "$_vault_ident" class "audio"
 media_metadata_set "$_vault_ident" music.album.artist "$_album_artist"
 media_metadata_set "$_vault_ident" music.album.title "$_album_title"
 media_metadata_set "$_vault_ident" music.album.year "$_track_year"
@@ -128,5 +132,7 @@ media_metadata_set "$_vault_ident" music.album.type "$_album_type"
 
 rm "$_mimes_file" &>/dev/null
 rm "$_artists_file" &>/dev/null
+
+echo "$_vault_ident"
 
 exit 0

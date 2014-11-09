@@ -19,6 +19,7 @@ ork_include stdout
 #   by-format/{episodic, film, clip}/vaults
 #   by-tag/[A-Z]/tags with pathified fanout/longform content
 #   by-year/years/title fanout
+#   by-rating/[G,PG,PG13,R,X]/vaults
 #
 # vault tags:
 #   video.box.format [episodic/film/clip]
@@ -33,6 +34,7 @@ ork_include stdout
 #   video.tape.episode
 #   video.tape.language
 #   video.tape.country
+#   video.tape.rating [G/PG/PG13/R/X]
 #   video.tape.genre
 #   video.tape.year
 #   video.tape.tags
@@ -54,7 +56,7 @@ _mimes_file="$(stdlib_tmpfile)"
 _count_file="$(stdlib_tmpfile)"
 _video_path="$(media_sentinels)/$(stdlib_pathify raw.classify.video)"
 _video_mimes="$_video_path/mime-types"
-_all_video_mimes="$(find "$_video_path" -name mime-types -exec cat "{}" \; > "$_mimes_file")"
+pp_all_video_mimes="$(find "$_video_path" -name mime-types -exec cat "{}" \; > "$_mimes_file")"
 
 # enumerate all audio files in the vault
 media_metadata_get "$_vault_ident" vault.contents | media_metadata_dataset_expand | while read _vault_file_ident; do
@@ -84,9 +86,12 @@ else
     _format="film"
 fi
 
+media_metadata_set "$_vault_ident" class "video"
 media_metadata_set "$_vault_ident" video.box.format "$_format"
 
 rm "$_mimes_file" &>/dev/null
 rm "$_count_file" &>/dev/null
+
+echo "$_target_vault"
 
 exit 0

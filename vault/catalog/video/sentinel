@@ -1,0 +1,76 @@
+#!/bin/bash
+
+source orkhideya
+ork_include media
+ork_include stdout
+ork_include stdlib
+
+function catalog_acquire
+{
+    local _ident="$1"
+    test -z "$_ident" && return 1
+    ! media_shelved "$_ident" && return 2
+
+    local _tag="$2"
+    test -z "$_tag" && return 3
+
+    local _metadata_value="$(media_metadata_get "$_ident" "$_tag")"
+
+    if [ -n "$_metadata_value" ]; then
+        stdout_normal "Current value of $(stdout_color_wrap main-focused "$_tag") is $(stdout_color_wrap main-focused "$_metadata_value")."
+        test "$(stdout_prompt_yesno "Change this value?")" == "n" && return 0
+        _metadata_value=""
+    fi
+
+    while [ -z "$_metadata_value" ]; do
+        local _new_value="$(stdout_prompt "Enter a value for $(stdout_color_wrap main-focused "$_tag").")"
+
+        if [ -z "$_new_value" ]; then
+            local _response="$(stdout_prompt_yesno "Are you sure you wish to clear this tag?")"
+            test "$_response" == "n" && continue
+
+            ! media_metadata_set "$_ident" "$_tag" && return 4
+            return 0
+        fi
+
+        local _correct_value="$(stdout_prompt_yesno "Is this correct? $(stdout_color_wrap main-focused "$_new_value")")"
+        test "$_correct_value" == "n" && continue
+
+        _metadata_value="$_new_value"
+    done
+
+    ! media_metadata_set "$_ident" "$_tag" "$_metadata_value" && return 5
+    return 0
+}
+
+_vault_ident="$1"
+test -z "$_vault_ident" && exit 1
+! media_shelved "$_vault_ident" && exit 2
+
+_vault_class="$(media_metadata_get "$_vault_ident" class)"
+ test "$_vault_class" != "audio" && exit 3
+
+stdout_normal "Cataloging vault, ID $(stdout_color_wrap main-focused "$_vault_ident")."
+catalog_acquire "$_vault_ident" video.box.title
+catalog_acquire "$_vault_ident" video.box.studio
+catalog_acquire "$_vault_ident" video.box.year
+catalog_acquire "$_vault_ident" video.box.format
+catalog_acquire "$_vault_ident" video.box.season
+
+for _track_ident in $(media_metadata_get "$_vault_ident" vault.contents | media_metadata_dataset_expand); do
+    _track_alias="$(media_metadata_get "$_track_ident" alias)"
+    stdout_normal "Cataloging content, ID $(stdout_color_wrap main-focused "$_track_ident")."
+    stdout_normal "Aliased as $(stdout_color_wrap main-focused "$_track_alias")."
+
+    catalog_acquire "$_track_ident" video.tape.title
+    catalog_acquire "$_track_ident" video.tape.year
+    catalog_acquire "$_track_ident" video.tape.rating
+    catalog_acquire "$_track_ident" video.tape.genre
+    catalog_acquire "$_track_ident" video.tape.season
+    catalog_acquire "$_track_ident" video.tape.episode
+    catalog_acquire "$_track_ident" video.tape.language
+    catalog_acquire "$_track_ident" video.tape.country
+    catalog_acquire "$_track_ident" video.tape.tags
+done
+
+exit 0
