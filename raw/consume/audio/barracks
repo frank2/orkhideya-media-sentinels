@@ -45,7 +45,7 @@ function music_flac_metadata_get
     local _translated_flac_tag="$(music_metadata_translate_flac "$_flac_tag")"
     test -z "$_translated_flac_tag" && return 2
 
-    local _flac_line="$(metaflac --export-tags-to=- "$_flac_file" | grep -i "^${_flac_tag}=")"
+    local _flac_line="$(metaflac --export-tags-to=- "$_flac_file" | grep -i "^${_translated_flac_tag}=")"
     test -z "$_flac_line" && return 3
 
     local _flac_file_tag="$(echo "$_flac_line" | awk -F '=' '{ print $1 }')"
