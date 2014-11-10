@@ -1,4 +1,4 @@
-b#!/bin/bash
+#!/bin/bash
 
 source orkhideya
 ork_include media
