@@ -48,29 +48,97 @@ test -z "$_vault_ident" && exit 1
 ! media_shelved "$_vault_ident" && exit 2
 
 _vault_class="$(media_metadata_get "$_vault_ident" class)"
- test "$_vault_class" != "audio" && exit 3
+test "$_vault_class" != "audio" && exit 3
+
+_vault_alias="$(media_metadata_get "$_vault_ident" alias)"
 
 stdout_normal "Cataloging vault, ID $(stdout_color_wrap main-focused "$_vault_ident")."
-catalog_acquire "$_vault_ident" music.album.artist
-catalog_acquire "$_vault_ident" music.album.title
-catalog_acquire "$_vault_ident" music.album.year
-catalog_acquire "$_vault_ident" music.album.type
-catalog_acquire "$_vault_ident" music.album.releasegroup
+stdout_normal "Aliased as $(stdout_color_wrap main-focused "$_vault_alias")."
+
+_vault_modify="y"
+
+while [ "$_vault_modify" == "y" ]; do
+    stdout_normal "Current vault properties:"
+    stdout_normal "... music.album.artist:       $(stdout_color_wrap main-focused "$(media_metadata_get "$_vault_ident" music.album.artist)")"
+    stdout_normal "... music.album.title:        $(stdout_color_wrap main-focused "$(media_metadata_get "$_vault_ident" music.album.title)")"
+    stdout_normal "... music.album.year:         $(stdout_color_wrap main-focused "$(media_metadata_get "$_vault_ident" music.album.year)")"
+    stdout_normal "... music.album.type:         $(stdout_color_wrap main-focused "$(media_metadata_get "$_vault_ident" music.album.type)")"
+    stdout_normal "... music.album.discs:        $(stdout_color_wrap main-focused "$(media_metadata_get "$_vault_ident" music.album.discs)")"
+    stdout_normal "... music.album.releasegroup: $(stdout_color_wrap main-focused "$(media_metadata_get "$_vault_ident" music.album.releasegroup)")"
+
+    _vault_modify="$(stdout_prompt_yesno "Modify the vault properties?")"
+
+    if [ "$_vault_modify" == "n" ]; then break; fi
+
+    _vault_modifier="$(stdout_prompt_sequence "Select a trait to modify." "music.album.artist" "music.album.title" "music.album.year" "music.album.type" "music.album.discs" "music.album.releasegroup")"
+
+    catalog_acquire "$_vault_ident" "$_vault_modifier"
+done
+
+_common_response="$(stdout_prompt_yesno "Set common metadata?")"
+
+if [ "$_common_response" == "y" ]; then
+    _continue_common="y"
+
+    while [ "$_continue_common" == "y" ]; do
+        _common_metadata_tag="$(stdout_prompt_sequence "Select a common value to set." "music.track.artist" "music.track.album" "music.track.year" "music.track.genre" "music.track.country" "music.track.language" "music.track.tags")"
+        _common_metadata_value="$(stdout_prompt "Set the common value for $(stdout_color_wrap main-focused "$_common_metadata_tag").")"
+
+        stdout_normal "The tag for $(stdout_color_wrap main-focused "$_common_metadata_tag") will be set to $(stdout_color_wrap attention "$_common_metadata_value")."
+
+        _common_answer="$(stdout_prompt_yesno "Is this correct?")"
+
+        if [ "$_common_answer" == "n" ]; then continue; fi
+
+        for _track_ident in $(media_metadata_get "$_vault_ident" vault.contents | media_metadata_dataset_expand); do
+            stdout_normal "Setting tag for $(stdout_color_wrap main-focused "$_track_ident")..."
+            media_metadata_set "$_track_ident" "$_common_metadata_tag" "$_common_metadata_value"
+        done
+
+        _continue_common="$(stdout_prompt_yesno "Continue editing common data?")"
+    done
+fi
+
+_individual_response="$(stdout_prompt_yesno "Edit individual tracks?")"
+
+if [ "$_individual_response" == "n" ]; then
+    stdout_normal "Cataloguing complete."
+    exit 0
+fi
 
 for _track_ident in $(media_metadata_get "$_vault_ident" vault.contents | media_metadata_dataset_expand); do
     _track_alias="$(media_metadata_get "$_track_ident" alias)"
+    _track_filename="$(media_metadata_get "$_track_ident" extension)"
+
+    test "$_track_filename" != "mp3" -a "$_track_filename" != "flac" && continue
+
     stdout_normal "Cataloging content, ID $(stdout_color_wrap main-focused "$_track_ident")."
     stdout_normal "Aliased as $(stdout_color_wrap main-focused "$_track_alias")."
+    
+    _content_modify="y"
 
-    catalog_acquire "$_track_ident" music.track.artist
-    catalog_acquire "$_track_ident" music.track.title
-    catalog_acquire "$_track_ident" music.track.album
-    catalog_acquire "$_track_ident" music.track.number
-    catalog_acquire "$_track_ident" music.track.year
-    catalog_acquire "$_track_ident" music.track.genre
-    catalog_acquire "$_track_ident" music.track.country
-    catalog_acquire "$_track_ident" music.track.language
-    catalog_acquire "$_track_ident" music.track.tags
+    while [ "$_content_modify" == "y" ]; do
+        stdout_normal "Current content properties:"
+        stdout_normal "... music.track.artist:     $(stdout_color_wrap main-focused "$(media_metadata_get "$_track_ident" music.track.artist)")"
+        stdout_normal "... music.track.title:      $(stdout_color_wrap main-focused "$(media_metadata_get "$_track_ident" music.track.title)")"
+        stdout_normal "... music.track.album:      $(stdout_color_wrap main-focused "$(media_metadata_get "$_track_ident" music.track.album)")"
+        stdout_normal "... music.track.discnumber: $(stdout_color_wrap main-focused "$(media_metadata_get "$_track_ident" music.track.discnumber)")"
+        stdout_normal "... music.track.number:     $(stdout_color_wrap main-focused "$(media_metadata_get "$_track_ident" music.track.number)")"
+        stdout_normal "... music.track.year:       $(stdout_color_wrap main-focused "$(media_metadata_get "$_track_ident" music.track.year)")"
+        stdout_normal "... music.track.genre:      $(stdout_color_wrap main-focused "$(media_metadata_get "$_track_ident" music.track.genre)")"
+        stdout_normal "... music.track.country:    $(stdout_color_wrap main-focused "$(media_metadata_get "$_track_ident" music.track.country)")"
+        stdout_normal "... music.track.language:   $(stdout_color_wrap main-focused "$(media_metadata_get "$_track_ident" music.track.language)")"
+        stdout_normal "... music.track.tags:       $(stdout_color_wrap main-focused "$(media_metadata_get "$_track_ident" music.track.tags)")"
+
+        _content_modify="$(stdout_prompt_yesno "Modify the content properties?")"
+
+        if [ "$_content_modify" == "n" ]; then break; fi
+
+        _content_modifier="$(stdout_prompt_sequence "Select a trait to modify." "music.track.artist" "music.track.title" "music.track.album" "music.track.discnumber" "music.track.number" "music.track.year" "music.track.genre" "music.track.country" "music.track.language" "music.track.tags")"
+
+        catalog_acquire "$_track_ident" "$_content_modifier"
+    done
 done
 
+stdout_normal "Cataloguing complete."
 exit 0

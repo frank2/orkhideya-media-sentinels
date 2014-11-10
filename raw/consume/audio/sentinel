@@ -63,6 +63,7 @@ _mimes_file="$(stdlib_tmpfile)"
 _artists_file="$(stdlib_tmpfile)"
 _albums_file="$(stdlib_tmpfile)"
 _audio_path="$(media_sentinels)/$(stdlib_pathify raw.classify.audio)"
+_discs="0"
 
 _audio_mimes="$_audio_path/mime-types"
 _all_audio_mimes="$(find "$_audio_path" -name mime-types -exec cat "{}" \; > "$_mimes_file")"
@@ -89,7 +90,7 @@ media_metadata_get "$_vault_ident" vault.contents | media_metadata_dataset_expan
     _track_language="$(music_metadata_get "$_vault_file_ident" track.language)"
     _track_title="$(music_metadata_get "$_vault_file_ident" track.title)"
     _track_number="$(music_metadata_get "$_vault_file_ident" track.number)"
-    _track_discnumber="$(music_metadata_get "$_vault_file_ident" track.number)"
+    _track_discnumber="$(music_metadata_get "$_vault_file_ident" track.discnumber)"
     _track_year="$(music_metadata_get "$_vault_file_ident" track.year)"
     _track_tags="$_input_tags"
 
@@ -100,8 +101,15 @@ media_metadata_get "$_vault_ident" vault.contents | media_metadata_dataset_expan
     media_metadata_set "$_vault_file_ident" music.track.language "$_track_language"
     media_metadata_set "$_vault_file_ident" music.track.title "$_track_title"
     media_metadata_set "$_vault_file_ident" music.track.number "$_track_number"
+    media_metadata_set "$_vault_file_ident" music.track.discnumber "$_track_discnumber"
     media_metadata_set "$_vault_file_ident" music.track.year "$_track_year"
     media_metadata_set "$_vault_file_ident" music.track.tags "$_track_tags"
+
+    if [ -n "$_track_discnumber" ]; then
+        if [ "$_track_discnumber" -gt "$_discs" ]; then
+            _discs="$_track_discnumber"
+        fi
+    fi
 
     echo "$_track_artist" >> "$_artists_file"
     echo "$_track_album" >> "$_albums_file"
@@ -124,11 +132,16 @@ else
     _album_type="album"
 fi
 
+if [ "$_discs" == "0" ]; then
+    _discs="1"
+fi
+
 media_metadata_set "$_vault_ident" class "audio"
 media_metadata_set "$_vault_ident" music.album.artist "$_album_artist"
 media_metadata_set "$_vault_ident" music.album.title "$_album_title"
 media_metadata_set "$_vault_ident" music.album.year "$_track_year"
 media_metadata_set "$_vault_ident" music.album.type "$_album_type"
+media_metadata_set "$_vault_ident" music.album.discs "$_discs"
 
 rm "$_mimes_file" &>/dev/null
 rm "$_artists_file" &>/dev/null

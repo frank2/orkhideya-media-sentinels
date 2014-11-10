@@ -10,7 +10,7 @@ function pathfriendly_directory
     local _filename="$1"
     test -z "$_filename" && return 1
 
-    _filename="$(echo "$_filename" | sed -r -e 's,[<>{}=@#%^&\*:;\'\"]+,,g')"
+    _filename="$(echo "$_filename" | sed -r -e "s,[<>{}=@#%^&\*:;'\"]+,,g")"
     _filename="$(echo "$_filename" | sed -r -e 's,^\s+,,' -e 's,\s$,,' -e 's,\s+,_,g')"
 
     echo "$_filename"
@@ -32,7 +32,7 @@ function pathified_first_character
 
     local _first_character="$(echo ${_string:0:1} | tr '[:lower:]' '[:upper:]')"
 
-    if [ -z "$(echo "$_first_character" | egrep -i -o '^[A-Z0-9]$')" ]; then
+    if [ -z "$(echo "$_first_character" | egrep -i -o '^[A-Z0-9]$' )" ]; then
         echo "SYM"
     else
         echo "$_first_character"
@@ -41,3 +41,16 @@ function pathified_first_character
     return 0
 }
 
+function link_unexist
+{
+    local _link_source="$1"
+    ! test -e "$_link_source" && return 1
+
+    local _link_target="$2"
+    test -L "$_link_target" && return 0
+    test -e "$_link_target" && return 2
+
+    ! ln -s "$_link_source" "$_link_target" && return 3
+
+    return 0
+}

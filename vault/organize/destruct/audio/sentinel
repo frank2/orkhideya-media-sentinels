@@ -7,6 +7,7 @@ ork_include stdout
 
 # helper functions to assist either this script or others
 source "$(media_sentinels)/$(stdlib_pathify vault.organize.construct.audio)/barracks"
+source "$(media_sentinels)/$(stdlib_pathify vault.organize.destruct.audio)/barracks"
 
 _vault_ident="$1"
 test -z "$_vault_ident" && exit 1
@@ -53,10 +54,6 @@ _by_year="$(pathfriendly_directory "${_catacomb_root}/by-year/$_album_year")"
 for _content_ident in $(media_metadata_get "$_vault_ident" vault.contents | media_metadata_dataset_expand); do
     ! media_shelved "$_content_ident" && exit 4
 
-    _content_ident_path="$(media_identity_path "$_content_ident")"
-    _track_file="$(media_archive)/$_content_ident_path/file"
-    ! test -r "$_track_file" && exit 5
-
     _track_extension="$(media_metadata_get "$_content_ident" extension)"
     test "$_track_extension" != "mp3" -a "$_track_extension" != "flac" && continue
 
@@ -99,45 +96,20 @@ for _content_ident in $(media_metadata_get "$_vault_ident" vault.contents | medi
     _by_language="$(pathfriendly_directory "${_catacomb_root}/by-language/${_pathified_language}/${_track_language}")"
     _by_single="$(pathfriendly_directory "${_catacomb_root}/by-single/${_pathified_title}/${_track_title}")"
 
-    # populate the album fanout
-    ! mkdir -p "$_by_album" && exit 6
-    ! link_unexist "$_track_file" "$_by_album/$_shortform_filename" && exit 7
-
-    # populate the artist fanout
-    ! mkdir -p "$_by_artist" && exit 8
-    ! link_unexist "$_by_album" "$_by_artist/$_vault_path" && exit 9
-
-    # populate the country fanout
-    ! mkdir -p "$_by_country" && exit 10
-    ! link_unexist "$_by_album" "$_by_country/$_vault_path" && exit 11
-
-    # populate the genre fanout
-    ! mkdir -p "$_by_genre/$_pathified_title" && exit 12
-    ! link_unexist "$_track_file" "$_by_genre/$_pathified_title/$_longform_filename" && exit 13
-
-    # populate the language fanout
-    ! mkdir -p "$_by_language/$_pathified_title" && exit 14
-    ! link_unexist "$_track_file" "$_by_language/$_pathified_title/$_longform_filename" && exit 15
-
-    # populate by single
-    ! mkdir -p "$_by_single/$_pathified_title" && exit 16
-    ! link_unexist "$_track_file" "$_by_single/$_pathified_title/$_longform_filename" && exit 17
-
-    # populate the releasegroup fanout
-    ! mkdir -p "$_by_releasegroup" && exit 18
-    ! link_unexist "$_by_album" "$_by_releasegroup/$_vault_path" && exit 19
-
-    # populate the year fanout
-    ! mkdir -p "$_by_year" && exit 20
-    ! link_unexist "$_by_album" "$_by_year/$_vault_path" && exit 21
+    ! teardown "$_by_album/$_shortform_filename" && exit 7
+    ! teardown "$_by_artist/$_vault_path" && exit 9
+    ! teardown "$_by_country/$_vault_path" && exit 11
+    ! teardown "$_by_genre/$_pathified_title/$_longform_filename" && exit 13
+    ! teardown "$_by_language/$_pathified_title/$_longform_filename" && exit 15
+    ! teardown "$_by_single/$_pathified_title/$_longform_filename" && exit 17
+    ! teardown "$_by_releasegroup/$_vault_path" && exit 19
+    ! teardown "$_by_year/$_vault_path" && exit 21
 
     for _content_tag in $(echo "$_track_tags" | media_metadata_dataset_expand); do
         _pathified_tag="$(pathified_first_character "$_content_tag")"
         _by_tag="$(pathfriendly_directory "${_catacomb_root}/by-tag/${_pathified_tag}/${_content_tag}")"
 
-        # populate the tags
-        ! mkdir -p "$_by_tag" && exit 22
-        ! link_unexist "$_track_file" "$_by_tag/$_longform_filename" && exit 23
+        ! teardown "$_by_tag/$_longform_filename" && exit 23
     done
 done
 

@@ -1,0 +1,26 @@
+#!/bin/bash
+
+source orkhideya
+ork_include media
+ork_include stdlib
+ork_include stdout
+
+function teardown
+{
+    local _target_path="$1"
+    test -z "$_target_path" && return 1
+    ! test -e "$_target_path" && return 0 # if an object doesn't exist, that's okay
+    ! test -L "$_target_path" && return 2 # but if it's not a link...
+
+    local _teardown_root="$(media_catacomb)/audio"
+
+    ! unlink "$_target_path" && return 3
+    _target_path="$(stdlib_cdup "$_target_path")"
+
+    while [ "$_target_path" != "$_teardown_root" -a "$(ls -a "$_target_path" | wc -l)" == "2" ]; do
+        ! rmdir "$_target_path" && return 4
+        _target_path="$(stdlib_cdup "$_target_path")"
+    done
+
+    return 0
+}
