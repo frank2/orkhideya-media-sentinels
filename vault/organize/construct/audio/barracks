@@ -34,7 +34,7 @@ function pathified_first_character
 
     local _first_character="$(echo ${_string:0:1} | tr '[:lower:]' '[:upper:]')"
 
-    if [ -z "$(echo "$_first_character" | egrep -i -o '^[A-Z0-9]$' )" ]; then
+    if [ -z "$(echo "$_first_character" | egrep -i -o '^[A-Z]$' )" ]; then
         echo "SYM"
     else
         echo "$_first_character"
