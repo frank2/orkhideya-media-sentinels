@@ -89,8 +89,11 @@ media_metadata_get "$_vault_ident" vault.contents | media_metadata_dataset_expan
     _track_genre="$(music_metadata_get "$_vault_file_ident" track.genre)"
     _track_language="$(music_metadata_get "$_vault_file_ident" track.language)"
     _track_title="$(music_metadata_get "$_vault_file_ident" track.title)"
-    _track_number="$(music_metadata_get "$_vault_file_ident" track.number)"
-    _track_discnumber="$(music_metadata_get "$_vault_file_ident" track.discnumber)"
+
+    # track numbers and discnumbers are particularly finnicky, coming in multiple forms
+    _track_number="$(music_metadata_get "$_vault_file_ident" track.number | awk -F '/' '{ print $1 }' | awk -F '\\' '{ print $1 }' | sed -r -e 's,^0+,,')"
+    _track_discnumber="$(music_metadata_get "$_vault_file_ident" track.discnumber | awk -F '/' '{ print $1 }' | awk -F '\\' '{ print $1 }' | sed -r -e 's,^0+,,')"
+
     _track_year="$(music_metadata_get "$_vault_file_ident" track.year)"
     _track_tags="$_input_tags"
 
