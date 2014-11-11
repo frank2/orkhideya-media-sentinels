@@ -11,7 +11,9 @@ function pathfriendly_directory
     test -z "$_filename" && return 1
 
     _filename="$(echo "$_filename" | sed -r -e "s,[<>{}=@#%^&\*:;'\"]+,,g")"
+    _filename="$(echo "$_filename" | sed -r -e "s,[/.\(\)]+,_,g")"
     _filename="$(echo "$_filename" | sed -r -e 's,^\s+,,' -e 's,\s$,,' -e 's,\s+,_,g')"
+    _filename="$(echo "$_filename" | sed -r -e 's,_+,_,g')"
 
     echo "$_filename"
 }
