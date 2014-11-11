@@ -5,13 +5,22 @@ ork_include media
 ork_include stdlib
 ork_include stdout
 
+function path_hazards
+{
+    local _hazard_area="$1"
+    test -z "$_hazard_area" && return 1
+
+    _hazard_area="$(echo "$_hazard_area" | sed -r -e "s,[/\\<>\.{}=@#%^&\*:;'\"\[\]\(\)]+,,g")"
+    echo "$_hazard_area"
+
+    return 0
+}
+
 function pathfriendly_directory
 {
     local _filename="$1"
     test -z "$_filename" && return 1
 
-    _filename="$(echo "$_filename" | sed -r -e "s,[<>{}=@#%^&\*:;'\"]+,,g")"
-    _filename="$(echo "$_filename" | sed -r -e "s,[/.\(\)]+,_,g")"
     _filename="$(echo "$_filename" | sed -r -e 's,^\s+,,' -e 's,\s$,,' -e 's,\s+,_,g')"
     _filename="$(echo "$_filename" | sed -r -e 's,_+,_,g')"
 

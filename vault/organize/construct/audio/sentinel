@@ -34,19 +34,19 @@ _catacomb_root="$(media_catacomb)/audio"
 
 if [ "$_album_type" == "ep" -o "$_album_type" == "lp" -o "$_album_type" == "cds" ]; then
     _album_type="$(echo "$_album_type" | tr '[:lower:]' '[:upper:]')"
-    _vault_path="${_album_artist}-${_album_title}-${_album_type}-${_album_year}-${_album_releasegroup}"
+    _vault_path="$(path_hazards "${_album_artist}-${_album_title}-${_album_type}-${_album_year}-${_album_releasegroup}")"
 else
     if [ "$_album_discs" -gt "1" ]; then
-        _vault_path="${_album_artist}-${_album_title}-${_album_discs}CD-${_album_year}-${_album_releasegroup}"
+        _vault_path="$(path_hazards "${_album_artist}-${_album_title}-${_album_discs}CD-${_album_year}-${_album_releasegroup}")"
     else
-        _vault_path="${_album_artist}-${_album_title}-${_album_year}-${_album_releasegroup}"
+        _vault_path="$(path_hazards "${_album_artist}-${_album_title}-${_album_year}-${_album_releasegroup}")"
     fi
 fi
 
 _vault_path="$(pathfriendly_directory "$_vault_path")"
 
-_by_album="$(pathfriendly_directory "${_catacomb_root}/by-album/${_pathified_album}/${_album_title}/$_vault_path")"
-_by_artist="$(pathfriendly_directory "${_catacomb_root}/by-artist/${_pathified_artist}/${_album_artist}")"
+_by_album="$(pathfriendly_directory "${_catacomb_root}/by-album/${_pathified_album}/$(path_hazards "${_album_title}")/$_vault_path")"
+_by_artist="$(pathfriendly_directory "${_catacomb_root}/by-artist/${_pathified_artist}/$(path_hazards "${_album_artist}")")"
 _by_releasegroup="$(pathfriendly_directory "${_catacomb_root}/by-releasegroup/${_pathified_rlsgroup}/${_album_releasegroup}")"
 _by_year="$(pathfriendly_directory "${_catacomb_root}/by-year/$_album_year")"
 
@@ -84,20 +84,20 @@ for _content_ident in $(media_metadata_get "$_vault_ident" vault.contents | medi
     fi
 
     if [ "$_album_artist" == "Various Artists" ]; then
-        _shortform_filename="${_track_discnumber}$(printf '%02d' "$_track_number")-${_track_artist}-${_track_title}-${_album_releasegroup}.${_track_extension}"
+        _shortform_filename="$(path_hazards "${_track_discnumber}$(printf '%02d' "$_track_number")-${_track_artist}-${_track_title}-${_album_releasegroup}").${_track_extension}"
     else
-        _shortform_filename="${_track_discnumber}$(printf '%02d' "$_track_number")-${_track_title}-${_album_releasegroup}.${_track_extension}"
+        _shortform_filename="$(path_hazards "${_track_discnumber}$(printf '%02d' "$_track_number")-${_track_title}-${_album_releasegroup}").${_track_extension}"
     fi
 
     _shortform_filename="$(pathfriendly_file "$_shortform_filename")"
 
-    _longform_filename="${_track_album}-${_track_discnumber}$(printf '%02d' "$_track_number")-${_track_artist}-${_track_title}-${_album_releasegroup}.${_track_extension}"
+    _longform_filename="$(path_hazards "${_track_album}-${_track_discnumber}$(printf '%02d' "$_track_number")-${_track_artist}-${_track_title}-${_album_releasegroup}").${_track_extension}"
     _longform_filename="$(pathfriendly_file "$_longform_filename")"
 
-    _by_country="$(pathfriendly_directory "${_catacomb_root}/by-country/${_pathified_country}/${_track_country}")"
-    _by_genre="$(pathfriendly_directory "${_catacomb_root}/by-genre/${_pathified_genre}/${_track_genre}")"
-    _by_language="$(pathfriendly_directory "${_catacomb_root}/by-language/${_pathified_language}/${_track_language}")"
-    _by_single="$(pathfriendly_directory "${_catacomb_root}/by-single/${_pathified_title}/${_track_title}")"
+    _by_country="$(pathfriendly_directory "${_catacomb_root}/by-country/${_pathified_country}/$(path_hazards "${_track_country}")")"
+    _by_genre="$(pathfriendly_directory "${_catacomb_root}/by-genre/${_pathified_genre}/$(path_hazards "${_track_genre}")")"
+    _by_language="$(pathfriendly_directory "${_catacomb_root}/by-language/${_pathified_language}/$(path_hazards "${_track_language}")")"
+    _by_single="$(pathfriendly_directory "${_catacomb_root}/by-single/${_pathified_title}/$(path_hazards "${_track_title}")")"
 
     # populate the album fanout
     ! mkdir -p "$_by_album" && exit 6
