@@ -10,7 +10,7 @@ function path_hazards
     local _hazard_area="$1"
     test -z "$_hazard_area" && return 1
 
-    _hazard_area="$(echo "$_hazard_area" | sed -r -e "s,[/<>\.\{\}=@#%^&\*:;'\"[()]+,_,g" -e 's,],_,g')"
+    _hazard_area="$(echo "$_hazard_area" | sed -r -e "s,[/<>\.,\{\}=@#%^&\*:;'\"[()]+,_,g" -e 's,],_,g')"
     echo "$_hazard_area"
 
     return 0
