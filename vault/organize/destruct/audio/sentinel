@@ -101,7 +101,7 @@ for _content_ident in $(media_metadata_get "$_vault_ident" vault.contents | medi
     ! teardown "$_by_country/$_vault_path" && exit 11
     ! teardown "$_by_genre/$_pathified_title/$_longform_filename" && exit 13
     ! teardown "$_by_language/$_pathified_title/$_longform_filename" && exit 15
-    ! teardown "$_by_single/$_pathified_title/$_longform_filename" && exit 17
+    ! teardown "$_by_single/$_longform_filename" && exit 17
     ! teardown "$_by_releasegroup/$_vault_path" && exit 19
     ! teardown "$_by_year/$_vault_path" && exit 21
 

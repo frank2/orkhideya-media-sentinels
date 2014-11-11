@@ -120,8 +120,8 @@ for _content_ident in $(media_metadata_get "$_vault_ident" vault.contents | medi
     ! link_unexist "$_track_file" "$_by_language/$_pathified_title/$_longform_filename" && exit 15
 
     # populate by single
-    ! mkdir -p "$_by_single/$_pathified_title" && exit 16
-    ! link_unexist "$_track_file" "$_by_single/$_pathified_title/$_longform_filename" && exit 17
+    ! mkdir -p "$_by_single" && exit 16
+    ! link_unexist "$_track_file" "$_by_single/$_longform_filename" && exit 17
 
     # populate the releasegroup fanout
     ! mkdir -p "$_by_releasegroup" && exit 18
